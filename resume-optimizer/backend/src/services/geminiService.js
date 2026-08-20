@@ -246,19 +246,40 @@ const rewriteSchema = {
 
 function generateMockRewrites(bulletText) {
   const cleanBullet = bulletText.replace(/^[\s•\-\*]+/, '').trim();
+  
+  const isListOrLink = /^(github|linkedin|http|https|website|portfolio|email|phone|skills|tools|technologies):/i.test(cleanBullet) ||
+    /^(https?:\/\/|www\.)/i.test(cleanBullet);
+
+  if (isListOrLink) {
+    return {
+      rewrites: [
+        {
+          text: cleanBullet,
+          rationale: 'Retained concise label/list format as this is a contact or skill reference line.',
+        },
+        {
+          text: cleanBullet.replace(/:\s*/, ': '),
+          rationale: 'Ensured clean formatting and standard label spacing.',
+        },
+      ],
+    };
+  }
+
+  const bulletWithoutLeadingVerb = cleanBullet.replace(/^(Spearheaded|Engineered|Architected|Optimized|Developed|Built|Led|Delivered)\s+/i, '');
+
   return {
     rewrites: [
       {
-        text: `Spearheaded ${cleanBullet.toLowerCase()}, driving key deliverable milestones and technical excellence across team initiatives.`,
-        rationale: 'Replaced passive phrasing with strong action verb "Spearheaded" to highlight ownership.',
+        text: `Engineered ${bulletWithoutLeadingVerb.charAt(0).toLowerCase() + bulletWithoutLeadingVerb.slice(1)}`,
+        rationale: 'Used concise action verb "Engineered" while staying within length boundaries.',
       },
       {
-        text: `Architected and optimized ${cleanBullet.toLowerCase()}, incorporating industry best practices to maximize quality and performance.`,
-        rationale: 'Framed execution with focus on scalable engineering design and technical impact.',
+        text: `Optimized ${bulletWithoutLeadingVerb.charAt(0).toLowerCase() + bulletWithoutLeadingVerb.slice(1)}`,
+        rationale: 'Emphasized technical optimization and direct alignment with role requirements.',
       },
       {
-        text: `Led end-to-end execution of ${cleanBullet.toLowerCase()}, aligning technical implementation directly with core organizational goals.`,
-        rationale: 'Emphasized leadership and strategic alignment while maintaining full fidelity to original work.',
+        text: `Architected ${bulletWithoutLeadingVerb.charAt(0).toLowerCase() + bulletWithoutLeadingVerb.slice(1)}`,
+        rationale: 'Framed execution with focus on scalable engineering design.',
       },
     ],
   };
@@ -278,6 +299,7 @@ export async function rewriteBulletPoint(bulletText, jobDescription, resumeConte
   const model = genAI.getGenerativeModel({
     model: modelName,
     generationConfig: {
+      temperature: 0.4,
       responseMimeType: 'application/json',
       responseSchema: rewriteSchema,
     },
@@ -287,11 +309,18 @@ export async function rewriteBulletPoint(bulletText, jobDescription, resumeConte
 You are a professional resume strategist and career editor.
 Provide exactly 2 to 3 improved versions of the candidate's resume bullet point tailored specifically to the target job description.
 
-STRICT TRUTHFULNESS & FACTUAL ACCURACY CONSTRAINTS:
-1. Stay 100% truthful to the original content.
-2. DO NOT invent, fabricate, or extrapolate specific metrics, numbers, percentages, company names, tools, or responsibilities not present or directly implied by the original bullet point.
-3. If the original implies a number without stating one, you may frame the achievement quantitatively, but DO NOT fabricate fake statistics (e.g. do not invent "$2M ARR" or "45%" if not in original).
-4. Incorporate relevant keywords and technical language from the job description ONLY where genuinely applicable to the candidate's stated experience.
+STRICT WRITING & QUALITY CONSTRAINTS:
+1. LENGTH BOUND: Each rewrite must stay within roughly ±20% of the original bullet's length. Do NOT let rewrites balloon into much longer sentences.
+2. VERB & FORMAT STYLE:
+   - For achievement/responsibility bullets: Start with a strong past-tense action verb (e.g., "Engineered", "Optimized", "Architected").
+   - For plain links, labels, contact lines, or skills lists (e.g., "GitHub: github.com/x" or "Skills: React, Node"): Do NOT turn them into narrative sentences or action-verb statements. Keep the rewrite in the exact same label/list format style (concise and un-embellished).
+3. NO FIRST-PERSON PRONOUNS: Never use "I", "my", or "me".
+4. GENUINE DIVERSITY: The 2-3 rewrites must be genuinely different from each other in phrasing and emphasis, not near-duplicates with swapped synonyms.
+5. NO BUZZWORD STUFFING: Do NOT add corporate buzzwords (e.g., "leveraged synergies", "spearheaded cross-functional initiatives") unless directly implied by the original bullet content.
+6. STRICT TRUTHFULNESS & FACTUAL ACCURACY:
+   - Stay 100% truthful to the original content.
+   - DO NOT invent, fabricate, or extrapolate specific metrics, numbers, percentages, company names, tools, or responsibilities not present or directly implied by the original bullet point.
+   - Incorporate relevant keywords and technical language from the job description ONLY where genuinely applicable to the candidate's stated experience.
 
 ORIGINAL BULLET POINT:
 """

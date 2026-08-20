@@ -116,6 +116,56 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
     }
   };
 
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState(null);
+  const [exportError, setExportError] = useState(null);
+
+  const handleExport = async (format) => {
+    setIsExporting(true);
+    setExportingFormat(format);
+    setExportError(null);
+
+    try {
+      const response = await fetch(`${apiUrl}/api/resume/export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          resumeText: currentResumeText,
+          format: format,
+          filename: 'optimized-resume',
+        }),
+      });
+
+      if (!response.ok) {
+        let errMessage = 'Failed to generate document';
+        try {
+          const errData = await response.json();
+          errMessage = errData.error || errMessage;
+        } catch (_) {}
+        throw new Error(errMessage);
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `optimized-resume.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      setExportError(err.message || 'Export failed. Please try again.');
+    } finally {
+      setIsExporting(false);
+      setExportingFormat(null);
+    }
+  };
+
   const handleLineClick = (lineText, lineIdx) => {
     setActiveLine({ index: lineIdx, text: lineText });
     fetchBulletRewrites(lineText);
@@ -316,6 +366,71 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* EXPORT RESUME CONTROL CARD */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Export Optimized Resume
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Download your resume including any accepted bullet rewrites applied below.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => handleExport('pdf')}
+              disabled={isExporting}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition-all shadow-md active:scale-95"
+            >
+              {isExporting && exportingFormat === 'pdf' ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Preparing PDF...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V7.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 1H7a2 2 0 00-2 2v16a2 2 0 002 2z" />
+                  </svg>
+                  <span>Download as PDF</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={() => handleExport('docx')}
+              disabled={isExporting}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-100 text-xs font-semibold rounded-xl border border-slate-700 transition-all shadow-md active:scale-95"
+            >
+              {isExporting && exportingFormat === 'docx' ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Preparing DOCX...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>Download as DOCX</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {exportError && (
+          <div className="p-3 bg-rose-950/40 border border-rose-800/60 rounded-xl text-rose-300 text-xs font-medium">
+            {exportError}
+          </div>
+        )}
       </div>
 
       {/* RESUME TEXT WITH INTERACTIVE BULLET REWRITING */}

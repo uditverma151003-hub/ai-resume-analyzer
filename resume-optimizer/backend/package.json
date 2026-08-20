@@ -16,7 +16,8 @@
     "express": "^4.19.2",
     "mammoth": "^1.12.1",
     "multer": "^2.2.0",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.19.1"
   },
   "devDependencies": {
     "docx": "^9.7.1",
