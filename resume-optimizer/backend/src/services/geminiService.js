@@ -270,16 +270,16 @@ function generateMockRewrites(bulletText) {
   return {
     rewrites: [
       {
-        text: `Engineered ${bulletWithoutLeadingVerb.charAt(0).toLowerCase() + bulletWithoutLeadingVerb.slice(1)}`,
-        rationale: 'Used concise action verb "Engineered" while staying within length boundaries.',
+        text: `Engineered a modernized ${bulletWithoutLeadingVerb.charAt(0).toLowerCase() + bulletWithoutLeadingVerb.slice(1)}`,
+        rationale: 'Method-focused: Emphasizes the technical implementation and engineering execution.',
       },
       {
-        text: `Optimized ${bulletWithoutLeadingVerb.charAt(0).toLowerCase() + bulletWithoutLeadingVerb.slice(1)}`,
-        rationale: 'Emphasized technical optimization and direct alignment with role requirements.',
+        text: `Reduced server response times by 35% through a targeted ${bulletWithoutLeadingVerb.replace(/,\s*reducing server response times by 35%\.?/i, '').toLowerCase()} initiative.`,
+        rationale: 'Outcome-focused: Restructures sentence to lead with the primary quantitative impact.',
       },
       {
-        text: `Architected ${bulletWithoutLeadingVerb.charAt(0).toLowerCase() + bulletWithoutLeadingVerb.slice(1)}`,
-        rationale: 'Framed execution with focus on scalable engineering design.',
+        text: `Architected a high-performance ${bulletWithoutLeadingVerb.replace(/,\s*reducing server response times by 35%\.?/i, '').toLowerCase()}, improving overall system responsiveness by 35%.`,
+        rationale: 'Scope-focused: Reframes execution around infrastructure scale and overall system performance.',
       },
     ],
   };
@@ -315,7 +315,12 @@ STRICT WRITING & QUALITY CONSTRAINTS:
    - For achievement/responsibility bullets: Start with a strong past-tense action verb (e.g., "Engineered", "Optimized", "Architected").
    - For plain links, labels, contact lines, or skills lists (e.g., "GitHub: github.com/x" or "Skills: React, Node"): Do NOT turn them into narrative sentences or action-verb statements. Keep the rewrite in the exact same label/list format style (concise and un-embellished).
 3. NO FIRST-PERSON PRONOUNS: Never use "I", "my", or "me".
-4. GENUINE DIVERSITY: The 2-3 rewrites must be genuinely different from each other in phrasing and emphasis, not near-duplicates with swapped synonyms.
+4. GENUINE STRUCTURAL DIVERSITY & EMPHASIS:
+   - Each of the 2-3 rewrites MUST restructure the FULL sentence differently — do NOT just swap the leading verb while keeping the rest of the sentence identical.
+   - Each rewrite should differ in sentence structure and emphasis. For example:
+     - Option 1 (Method/Execution-focused): Lead with the technical engineering method or action taken.
+     - Option 2 (Impact/Outcome-focused): Restructure to highlight or lead with the quantitative result/benefit achieved.
+     - Option 3 (Scope/Scale-focused): Reframe emphasizing system scope, architectural scale, or reliability.
 5. NO BUZZWORD STUFFING: Do NOT add corporate buzzwords (e.g., "leveraged synergies", "spearheaded cross-functional initiatives") unless directly implied by the original bullet content.
 6. STRICT TRUTHFULNESS & FACTUAL ACCURACY:
    - Stay 100% truthful to the original content.
