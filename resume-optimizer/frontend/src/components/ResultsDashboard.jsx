@@ -10,7 +10,7 @@ import {
 import HighlightedResume from './HighlightedResume';
 import BulletRewriteModal from './BulletRewriteModal';
 
-function ResultsDashboard({ analysis, resumeText, onReset }) {
+function ResultsDashboard({ analysis, resumeText, onReset, token }) {
   const [currentResumeText, setCurrentResumeText] = useState(resumeText);
   const [editedLineIndices, setEditedLineIndices] = useState(() => new Set());
 
@@ -94,6 +94,7 @@ function ResultsDashboard({ analysis, resumeText, onReset }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           bulletText,

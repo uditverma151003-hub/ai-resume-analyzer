@@ -4,6 +4,8 @@ import mammoth from 'mammoth';
 import path from 'path';
 import { createRequire } from 'module';
 import { analyzeResumeMatch, rewriteBulletPoint } from '../services/geminiService.js';
+import { requireAuth } from '../middleware/auth.js';
+import { supabase } from '../services/supabaseClient.js';
 
 const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
@@ -150,8 +152,8 @@ router.post('/parse', uploadSingleResume, async (req, res) => {
   }
 });
 
-router.post('/analyze', async (req, res) => {
-  const { resumeText, jobDescription } = req.body || {};
+router.post('/analyze', requireAuth, async (req, res) => {
+  const { resumeText, jobDescription, resumeFilename, filename } = req.body || {};
 
   if (!resumeText || typeof resumeText !== 'string' || resumeText.trim().length < 50) {
     return res.status(400).json({
@@ -168,7 +170,46 @@ router.post('/analyze', async (req, res) => {
   }
 
   try {
+    // Check monthly scan limit for current user (1 free scan per calendar month)
+    if (supabase) {
+      const now = new Date();
+      const startOfCalendarMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+
+      const { count, error: countErr } = await supabase
+        .from('scans')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', req.user.id)
+        .gte('created_at', startOfCalendarMonth);
+
+      if (countErr) {
+        console.error('[Scans Limit Check Error]:', countErr.message);
+      } else if (count !== null && count >= 1) {
+        return res.status(429).json({
+          success: false,
+          error: "You've used your free scan this month. Upgrade for unlimited access.",
+          limitReached: true
+        });
+      }
+    }
+
     const analysis = await analyzeResumeMatch(resumeText.trim(), jobDescription.trim());
+
+    // Persist scan result to Supabase
+    if (supabase) {
+      const { error: insertErr } = await supabase
+        .from('scans')
+        .insert({
+          user_id: req.user.id,
+          resume_filename: resumeFilename || filename || 'Resume',
+          job_description: jobDescription.trim(),
+          analysis_result: analysis
+        });
+
+      if (insertErr) {
+        console.error('[Scans Insert Error]:', insertErr.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       analysis
@@ -197,7 +238,7 @@ router.post('/analyze', async (req, res) => {
   }
 });
 
-router.post('/rewrite-bullet', async (req, res) => {
+router.post('/rewrite-bullet', requireAuth, async (req, res) => {
   const { bulletText, jobDescription, resumeContext } = req.body || {};
 
   if (!bulletText || typeof bulletText !== 'string' || bulletText.trim().length < 10) {

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import resumeRouter from './routes/resume.js';
+import scansRouter from './routes/scans.js';
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/resume', resumeRouter);
+app.use('/api/scans', scansRouter);
 
 app.listen(PORT, () => {
   console.log(`Backend server listening on http://localhost:${PORT}`);
