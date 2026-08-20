@@ -131,7 +131,7 @@ export async function analyzeResumeMatch(resumeText, jobDescription) {
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
   const model = genAI.getGenerativeModel({
     model: modelName,
@@ -273,7 +273,7 @@ export async function rewriteBulletPoint(bulletText, jobDescription, resumeConte
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
   const model = genAI.getGenerativeModel({
     model: modelName,
