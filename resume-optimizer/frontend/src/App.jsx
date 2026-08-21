@@ -10,12 +10,18 @@ import { supabase } from './lib/supabaseClient';
 function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [sessionExpiredMsg, setSessionExpiredMsg] = useState(null);
+
   const [backendStatus, setBackendStatus] = useState('checking...');
+  const [isWakingUpServer, setIsWakingUpServer] = useState(false);
+
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadIsSlow, setUploadIsSlow] = useState(false);
   const [parseResult, setParseResult] = useState(null);
   const [uploadError, setUploadError] = useState(null);
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzeIsSlow, setAnalyzeIsSlow] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [analysisError, setAnalysisError] = useState(null);
   const [limitReached, setLimitReached] = useState(false);
@@ -44,15 +50,35 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Check backend health
-  useEffect(() => {
+  // Check backend health with 3-second cold start warning timer
+  const checkBackendHealth = () => {
+    setBackendStatus('checking...');
+    setIsWakingUpServer(false);
+
+    const wakeUpTimer = setTimeout(() => {
+      setIsWakingUpServer(true);
+      setBackendStatus('Waking up the server — this can take up to a minute on first load');
+    }, 3000);
+
     fetch(`${apiUrl}/health`)
       .then((res) => {
         if (res.ok) return res.json();
-        throw new Error('Network response was not ok');
+        throw new Error('Health check non-200 response');
       })
-      .then(() => setBackendStatus('connected'))
-      .catch(() => setBackendStatus('unreachable'));
+      .then(() => {
+        clearTimeout(wakeUpTimer);
+        setIsWakingUpServer(false);
+        setBackendStatus('connected');
+      })
+      .catch(() => {
+        clearTimeout(wakeUpTimer);
+        setIsWakingUpServer(false);
+        setBackendStatus('unreachable');
+      });
+  };
+
+  useEffect(() => {
+    checkBackendHealth();
   }, [apiUrl]);
 
   const handleLogout = async () => {
@@ -64,15 +90,33 @@ function App() {
     setAnalysisResult(null);
     setAnalysisError(null);
     setLimitReached(false);
+    setSessionExpiredMsg(null);
+  };
+
+  const handleSessionExpired = async () => {
+    if (supabase) {
+      await supabase.auth.signOut().catch(() => {});
+    }
+    setSession(null);
+    setParseResult(null);
+    setAnalysisResult(null);
+    setAnalysisError(null);
+    setLimitReached(false);
+    setSessionExpiredMsg('Your session expired, please sign in again.');
   };
 
   const handleFileUpload = async (file) => {
     setIsUploading(true);
+    setUploadIsSlow(false);
     setUploadError(null);
     setParseResult(null);
     setAnalysisResult(null);
     setAnalysisError(null);
     setLimitReached(false);
+
+    const slowTimer = setTimeout(() => {
+      setUploadIsSlow(true);
+    }, 5000);
 
     const formData = new FormData();
     formData.append('resume', file);
@@ -91,9 +135,11 @@ function App() {
 
       setParseResult(data);
     } catch (err) {
-      setUploadError(err.message || 'An unexpected error occurred during file upload.');
+      setUploadError(err.message || 'Unable to upload file. Please check your connection and try again.');
     } finally {
+      clearTimeout(slowTimer);
       setIsUploading(false);
+      setUploadIsSlow(false);
     }
   };
 
@@ -101,8 +147,13 @@ function App() {
     if (!parseResult || !parseResult.extractedText) return;
 
     setIsAnalyzing(true);
+    setAnalyzeIsSlow(false);
     setAnalysisError(null);
     setLimitReached(false);
+
+    const slowTimer = setTimeout(() => {
+      setAnalyzeIsSlow(true);
+    }, 5000);
 
     const headers = {
       'Content-Type': 'application/json',
@@ -123,6 +174,11 @@ function App() {
         }),
       });
 
+      if (response.status === 401) {
+        handleSessionExpired();
+        return;
+      }
+
       const data = await response.json();
 
       if (response.status === 429 || data.limitReached) {
@@ -137,9 +193,11 @@ function App() {
 
       setAnalysisResult(data.analysis);
     } catch (err) {
-      setAnalysisError(err.message || 'An unexpected error occurred during analysis.');
+      setAnalysisError(err.message || 'Unable to connect to server. Please check your network and try again.');
     } finally {
+      clearTimeout(slowTimer);
       setIsAnalyzing(false);
+      setAnalyzeIsSlow(false);
     }
   };
 
@@ -159,32 +217,32 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center p-4 sm:p-6 font-sans">
-      <header className="w-full max-w-4xl flex items-center justify-between py-6 border-b border-slate-800 mb-8">
+      <header className="w-full max-w-4xl flex flex-col sm:flex-row sm:items-center justify-between py-6 border-b border-slate-800 mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">
             Resume Optimizer
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">Phase 5: Auth & Monthly Limit</p>
+          <p className="text-xs text-slate-400 mt-0.5">AI-Powered Resume Matcher & Optimizer</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {session?.user && (
             <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3.5 py-1.5 rounded-full text-xs">
-              <span className="text-slate-300 font-medium truncate max-w-[180px]">
+              <span className="text-slate-300 font-medium truncate max-w-[160px] sm:max-w-[180px]">
                 {session.user.email}
               </span>
               <button
                 onClick={handleLogout}
-                className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors border-l border-slate-800 pl-3"
+                className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors border-l border-slate-800 pl-3 min-h-[32px]"
               >
                 Logout
               </button>
             </div>
           )}
 
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium max-w-full">
             <span
-              className={`w-2 h-2 rounded-full ${
+              className={`w-2 h-2 rounded-full shrink-0 ${
                 backendStatus === 'connected'
                   ? 'bg-emerald-400 animate-pulse'
                   : backendStatus === 'unreachable'
@@ -192,12 +250,41 @@ function App() {
                   : 'bg-amber-400 animate-ping'
               }`}
             />
-            <span>Backend: {backendStatus}</span>
+            <span className="truncate max-w-[240px] sm:max-w-none">
+              {backendStatus === 'connected'
+                ? 'Backend: connected'
+                : backendStatus === 'unreachable'
+                ? 'Backend: unreachable'
+                : isWakingUpServer
+                ? 'Waking up the server — this can take up to a minute on first load'
+                : 'Checking backend...'}
+            </span>
+
+            {backendStatus === 'unreachable' && (
+              <button
+                onClick={checkBackendHealth}
+                className="ml-1 text-indigo-400 hover:text-indigo-300 font-bold underline text-[11px]"
+              >
+                Retry
+              </button>
+            )}
           </div>
         </div>
       </header>
 
       <main className="w-full max-w-4xl space-y-8">
+        {sessionExpiredMsg && (
+          <div className="p-4 bg-amber-950/60 border border-amber-800/80 rounded-2xl flex items-center justify-between text-amber-200 text-xs font-medium shadow-lg animate-fade-in">
+            <span>{sessionExpiredMsg}</span>
+            <button
+              onClick={() => setSessionExpiredMsg(null)}
+              className="text-amber-400 hover:text-amber-300 font-bold underline ml-2"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         {authLoading ? (
           <div className="py-20 text-center text-sm text-slate-400 flex items-center justify-center gap-2">
             <span className="w-4 h-4 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
@@ -205,7 +292,10 @@ function App() {
           </div>
         ) : !session ? (
           <div className="space-y-6">
-            <AuthForm onAuthSuccess={(sess) => setSession(sess)} />
+            <AuthForm onAuthSuccess={(sess) => {
+              setSession(sess);
+              setSessionExpiredMsg(null);
+            }} />
           </div>
         ) : (
           <div className="space-y-8">
@@ -227,6 +317,7 @@ function App() {
               <FileUpload
                 onFileSelect={handleFileUpload}
                 isLoading={isUploading}
+                isSlow={uploadIsSlow}
                 error={uploadError}
               />
             ) : analysisResult ? (
@@ -235,6 +326,7 @@ function App() {
                 resumeText={parseResult.extractedText}
                 onReset={handleResetAnalysis}
                 token={session.access_token}
+                onSessionExpired={handleSessionExpired}
               />
             ) : (
               <div className="space-y-8">
@@ -245,12 +337,17 @@ function App() {
                 <JobDescriptionInput
                   onAnalyze={handleAnalyzeMatch}
                   isAnalyzing={isAnalyzing}
+                  isSlow={analyzeIsSlow}
                   error={analysisError}
                 />
               </div>
             )}
 
-            <ScanHistory token={session.access_token} apiUrl={apiUrl} />
+            <ScanHistory
+              token={session.access_token}
+              apiUrl={apiUrl}
+              onSessionExpired={handleSessionExpired}
+            />
           </div>
         )}
       </main>
@@ -259,3 +356,4 @@ function App() {
 }
 
 export default App;
+

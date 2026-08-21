@@ -136,13 +136,14 @@ function AuthForm({ onAuthSuccess }) {
             setError(null);
             setMessage(null);
           }}
-          className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+          className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors py-2 px-3 inline-flex items-center justify-center min-h-[44px]"
         >
           {isSignUp
             ? 'Already have an account? Sign In'
             : "Don't have an account? Sign Up"}
         </button>
       </div>
+
     </div>
   );
 }

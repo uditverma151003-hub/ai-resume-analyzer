@@ -1,38 +1,42 @@
 import { useState, useEffect } from 'react';
 
-function ScanHistory({ token, apiUrl }) {
+function ScanHistory({ token, apiUrl, onSessionExpired }) {
   const [scans, setScans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const fetchHistory = async () => {
     if (!token) return;
+    setLoading(true);
+    setError(null);
 
-    const fetchHistory = async () => {
-      setLoading(true);
-      setError(null);
+    try {
+      const response = await fetch(`${apiUrl}/api/scans/history`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      try {
-        const response = await fetch(`${apiUrl}/api/scans/history`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || 'Failed to fetch scan history');
-        }
-
-        setScans(data.history || []);
-      } catch (err) {
-        setError(err.message || 'Unable to load scan history.');
-      } finally {
-        setLoading(false);
+      if (response.status === 401) {
+        if (onSessionExpired) onSessionExpired();
+        return;
       }
-    };
 
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to fetch scan history');
+      }
+
+      setScans(data.history || []);
+    } catch (err) {
+      setError(err.message || 'Unable to connect to server to fetch scan history.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchHistory();
   }, [token, apiUrl]);
 
@@ -44,9 +48,9 @@ function ScanHistory({ token, apiUrl }) {
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h3 className="text-base font-bold text-white flex items-center gap-2">
+        <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
           <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -65,15 +69,31 @@ function ScanHistory({ token, apiUrl }) {
       )}
 
       {error && !loading && (
-        <div className="p-3 bg-rose-950/40 border border-rose-800/60 rounded-xl text-rose-300 text-xs font-medium">
-          {error}
+        <div className="p-3.5 bg-rose-950/40 border border-rose-800/60 rounded-xl flex items-center justify-between gap-3 text-rose-300 text-xs font-medium">
+          <span>{error}</span>
+          <button
+            onClick={fetchHistory}
+            className="px-3 py-1 bg-rose-900 hover:bg-rose-800 text-white rounded text-xs font-semibold transition-colors shrink-0"
+          >
+            Retry
+          </button>
         </div>
       )}
 
       {!loading && !error && scans.length === 0 && (
-        <p className="text-xs text-slate-400 text-center py-4">
-          No past scans found. Run your first resume scan above!
-        </p>
+        <div className="py-8 text-center space-y-2 border border-dashed border-slate-800 rounded-xl bg-slate-950/40 p-4">
+          <div className="w-10 h-10 rounded-full bg-slate-800/60 text-slate-400 flex items-center justify-center mx-auto">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <p className="text-xs font-medium text-slate-300">
+            No scans yet — upload a resume to get started
+          </p>
+          <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+            Your match analysis history will be safely saved here after your first upload.
+          </p>
+        </div>
       )}
 
       {!loading && !error && scans.length > 0 && (
@@ -107,3 +127,4 @@ function ScanHistory({ token, apiUrl }) {
 }
 
 export default ScanHistory;
+

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 
-function FileUpload({ onFileSelect, isLoading, error }) {
+function FileUpload({ onFileSelect, isLoading, isSlow, error }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [validationError, setValidationError] = useState(null);
@@ -58,16 +58,25 @@ function FileUpload({ onFileSelect, isLoading, error }) {
     }
   };
 
+  const handleRetry = (e) => {
+    e.stopPropagation();
+    if (selectedFile) {
+      onFileSelect(selectedFile);
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
   const displayError = validationError || error;
 
   return (
-    <div className="w-full max-w-xl mx-auto">
+    <div className="w-full max-w-xl mx-auto space-y-3">
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => !isLoading && fileInputRef.current?.click()}
-        className={`relative border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 ${
+        className={`relative border-2 border-dashed rounded-2xl p-6 sm:p-10 text-center cursor-pointer transition-all duration-200 ${
           isDragOver
             ? 'border-indigo-400 bg-indigo-950/30 scale-[1.01]'
             : displayError
@@ -87,10 +96,19 @@ function FileUpload({ onFileSelect, isLoading, error }) {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-4 space-y-4">
             <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-            <div className="text-slate-300 font-medium">
+            <div className="text-slate-300 font-medium text-sm sm:text-base px-2">
               Parsing <span className="font-semibold text-white">{selectedFile?.name}</span>...
             </div>
             <p className="text-xs text-slate-500">Extracting raw text from resume</p>
+
+            {isSlow && (
+              <div className="mt-3 p-3 bg-amber-950/60 border border-amber-800/80 rounded-xl text-amber-200 text-xs max-w-md animate-fade-in flex items-center gap-2">
+                <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>This is taking a bit longer than usual — the server may be waking up from idle</span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-4">
@@ -113,14 +131,23 @@ function FileUpload({ onFileSelect, isLoading, error }) {
       </div>
 
       {displayError && (
-        <div className="mt-4 p-4 bg-rose-950/40 border border-rose-800/60 rounded-xl flex items-start gap-3 text-rose-200 text-sm animate-fade-in">
-          <svg className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div className="flex-1">
-            <span className="font-semibold block text-rose-300">Upload Failed</span>
-            {displayError}
+        <div className="mt-4 p-4 bg-rose-950/40 border border-rose-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-rose-200 text-sm animate-fade-in">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1">
+              <span className="font-semibold block text-rose-300">Upload Failed</span>
+              {displayError}
+            </div>
           </div>
+
+          <button
+            onClick={handleRetry}
+            className="self-end sm:self-center px-4 py-2 bg-rose-900 hover:bg-rose-800 text-white rounded-lg text-xs font-semibold transition-colors shrink-0 min-h-[36px]"
+          >
+            Try again
+          </button>
         </div>
       )}
     </div>
@@ -128,3 +155,4 @@ function FileUpload({ onFileSelect, isLoading, error }) {
 }
 
 export default FileUpload;
+

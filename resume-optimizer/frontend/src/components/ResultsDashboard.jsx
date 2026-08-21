@@ -10,7 +10,7 @@ import {
 import HighlightedResume from './HighlightedResume';
 import BulletRewriteModal from './BulletRewriteModal';
 
-function ResultsDashboard({ analysis, resumeText, onReset, token }) {
+function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpired }) {
   const [currentResumeText, setCurrentResumeText] = useState(resumeText);
   const [editedLineIndices, setEditedLineIndices] = useState(() => new Set());
 
@@ -102,6 +102,11 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
         }),
       });
 
+      if (res.status === 401) {
+        if (onSessionExpired) onSessionExpired();
+        return;
+      }
+
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -110,7 +115,7 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
 
       setRewrites(data.rewrites || []);
     } catch (err) {
-      setRewriteError(err.message || 'An unexpected error occurred during rewrite generation.');
+      setRewriteError(err.message || 'Unable to connect to server for bullet rewrites.');
     } finally {
       setIsRewriting(false);
     }
@@ -139,6 +144,11 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
           filename: 'optimized-resume',
         }),
       });
+
+      if (response.status === 401) {
+        if (onSessionExpired) onSessionExpired();
+        return;
+      }
 
       if (!response.ok) {
         let errMessage = 'Failed to generate document';
@@ -197,12 +207,12 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8 animate-fade-in pb-12">
+    <div className="w-full max-w-4xl mx-auto space-y-8 animate-fade-in pb-12 overflow-x-hidden">
       {/* Top Header & Reset Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-2xl shadow-2xl">
         <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold tracking-tight text-white">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
               Match Analysis Dashboard
             </h2>
             <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${scoreTheme.badgeBg}`}>
@@ -216,7 +226,7 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
 
         <button
           onClick={onReset}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-semibold rounded-xl border border-slate-700 transition-all shadow-md active:scale-95"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-semibold rounded-xl border border-slate-700 transition-all shadow-md active:scale-95 min-h-[44px]"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -228,7 +238,7 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
       {/* MATCH SCORE SECTION — Big Score Callout + Radar Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* Big Overall Score Card */}
-        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center shadow-xl relative overflow-hidden">
+        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-xl relative overflow-hidden">
           <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
             Overall Match Score
           </div>
@@ -254,30 +264,30 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
         </div>
 
         {/* Recharts Radar Chart */}
-        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-xl min-h-[300px]">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-2">
+        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 flex flex-col justify-between shadow-xl min-h-[300px] overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 mb-2 gap-2">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
               Category Radar Match
             </h3>
-            <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
+            <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-slate-400">
               <span>Skills: <strong className="text-white">{categoryScores.skillsMatch ?? 0}%</strong></span>
               <span>Exp: <strong className="text-white">{categoryScores.experienceMatch ?? 0}%</strong></span>
               <span>Keywords: <strong className="text-white">{categoryScores.keywordMatch ?? 0}%</strong></span>
             </div>
           </div>
 
-          <div className="w-full h-[230px] sm:h-[250px]">
+          <div className="w-full h-[220px] sm:h-[250px] relative">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
                 <PolarGrid stroke="#334155" strokeDasharray="3 3" />
                 <PolarAngleAxis
                   dataKey="subject"
-                  tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }}
+                  tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
                 />
                 <PolarRadiusAxis
                   angle={30}
                   domain={[0, 100]}
-                  tick={{ fill: '#64748b', fontSize: 10 }}
+                  tick={{ fill: '#64748b', fontSize: 9 }}
                   axisLine={false}
                 />
                 <Radar
@@ -296,9 +306,9 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
       </div>
 
       {/* EXECUTIVE SUMMARY CALLOUT CARD */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/20 to-slate-900 border border-indigo-900/40 rounded-2xl p-6 shadow-xl">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/20 to-slate-900 border border-indigo-900/40 rounded-2xl p-5 sm:p-6 shadow-xl">
         <div className="flex items-center gap-2 mb-2">
-          <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-indigo-300">
@@ -313,13 +323,13 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
       {/* KEYWORD GAP LIST SECTION — Matched & Missing */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Matched Keywords */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
               Matched Keywords ({matchedKeywords.length})
             </h3>
-            <span className="text-xs text-slate-500">Found in resume</span>
+            <span className="text-[11px] text-slate-500">Found in resume</span>
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
@@ -339,13 +349,13 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
         </div>
 
         {/* Missing Keywords */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-rose-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-rose-400" />
+              <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
               Missing Keywords ({sortedMissingKeywords.length})
             </h3>
-            <span className="text-xs text-slate-500">Sorted by importance</span>
+            <span className="text-[11px] text-slate-500">Sorted by importance</span>
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
@@ -369,11 +379,11 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
       </div>
 
       {/* EXPORT RESUME CONTROL CARD */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               Export Optimized Resume
@@ -383,11 +393,11 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
             <button
               onClick={() => handleExport('pdf')}
               disabled={isExporting}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition-all shadow-md active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition-all shadow-md active:scale-95 min-h-[44px]"
             >
               {isExporting && exportingFormat === 'pdf' ? (
                 <>
@@ -407,7 +417,7 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
             <button
               onClick={() => handleExport('docx')}
               disabled={isExporting}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-100 text-xs font-semibold rounded-xl border border-slate-700 transition-all shadow-md active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-100 text-xs font-semibold rounded-xl border border-slate-700 transition-all shadow-md active:scale-95 min-h-[44px]"
             >
               {isExporting && exportingFormat === 'docx' ? (
                 <>
@@ -460,3 +470,4 @@ function ResultsDashboard({ analysis, resumeText, onReset, token }) {
 }
 
 export default ResultsDashboard;
+
