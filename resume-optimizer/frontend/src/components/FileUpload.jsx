@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { UploadCloud, FileText, AlertCircle, RotateCw, Clock } from 'lucide-react';
 
 function FileUpload({ onFileSelect, isLoading, isSlow, error }) {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -70,18 +71,18 @@ function FileUpload({ onFileSelect, isLoading, isSlow, error }) {
   const displayError = validationError || error;
 
   return (
-    <div className="w-full max-w-xl mx-auto space-y-3">
+    <div className="w-full max-w-xl mx-auto space-y-4">
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => !isLoading && fileInputRef.current?.click()}
-        className={`relative border-2 border-dashed rounded-2xl p-6 sm:p-10 text-center cursor-pointer transition-all duration-200 ${
+        className={`relative border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200 ${
           isDragOver
-            ? 'border-indigo-400 bg-indigo-950/30 scale-[1.01]'
+            ? 'border-sky-400 bg-sky-950/30 scale-[1.01]'
             : displayError
             ? 'border-rose-500/60 bg-rose-950/20'
-            : 'border-slate-700 bg-slate-900/60 hover:border-indigo-500/50 hover:bg-slate-900'
+            : 'border-slate-800 bg-slate-900/60 hover:border-sky-500/40 hover:bg-slate-900/90'
         } ${isLoading ? 'pointer-events-none opacity-80' : ''}`}
       >
         <input
@@ -95,34 +96,30 @@ function FileUpload({ onFileSelect, isLoading, isSlow, error }) {
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-4 space-y-4">
-            <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+            <div className="w-12 h-12 border-3 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" />
             <div className="text-slate-300 font-medium text-sm sm:text-base px-2">
-              Parsing <span className="font-semibold text-white">{selectedFile?.name}</span>...
+              Parsing <span className="font-semibold text-white font-mono">{selectedFile?.name}</span>...
             </div>
-            <p className="text-xs text-slate-500">Extracting raw text from resume</p>
+            <p className="text-xs text-slate-500">Extracting raw document text...</p>
 
             {isSlow && (
-              <div className="mt-3 p-3 bg-amber-950/60 border border-amber-800/80 rounded-xl text-amber-200 text-xs max-w-md animate-fade-in flex items-center gap-2">
-                <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>This is taking a bit longer than usual — the server may be waking up from idle</span>
+              <div className="mt-3 p-3 bg-amber-950/50 border border-amber-800/60 rounded-xl text-amber-200 text-xs max-w-md animate-fade-in flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>This is taking a bit longer than usual — server waking up from idle</span>
               </div>
             )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
+            <div className="w-16 h-16 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 shadow-md">
+              <UploadCloud className="w-8 h-8" />
             </div>
 
-            <div>
-              <p className="text-base font-semibold text-white">
-                Drop your resume here, or <span className="text-indigo-400 hover:underline">browse</span>
+            <div className="space-y-1">
+              <p className="text-base font-bold text-white font-heading">
+                Drop your resume file here, or <span className="text-sky-400 underline underline-offset-4">browse</span>
               </p>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-400">
                 Supports PDF (.pdf) and Word (.docx) files up to 5MB
               </p>
             </div>
@@ -131,21 +128,20 @@ function FileUpload({ onFileSelect, isLoading, isSlow, error }) {
       </div>
 
       {displayError && (
-        <div className="mt-4 p-4 bg-rose-950/40 border border-rose-800/60 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-rose-200 text-sm animate-fade-in">
+        <div className="p-4 bg-rose-950/40 border border-rose-800/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-rose-200 text-sm animate-fade-in">
           <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <span className="font-semibold block text-rose-300">Upload Failed</span>
-              {displayError}
+              <span className="font-bold block text-rose-300 font-heading">Upload Failed</span>
+              <span className="text-xs">{displayError}</span>
             </div>
           </div>
 
           <button
             onClick={handleRetry}
-            className="self-end sm:self-center px-4 py-2 bg-rose-900 hover:bg-rose-800 text-white rounded-lg text-xs font-semibold transition-colors shrink-0 min-h-[36px]"
+            className="self-end sm:self-center px-4 py-2 bg-rose-900 hover:bg-rose-800 text-white rounded-xl text-xs font-semibold transition-colors shrink-0 flex items-center gap-1.5 min-h-[36px]"
           >
+            <RotateCw className="w-3.5 h-3.5" />
             Try again
           </button>
         </div>
@@ -155,4 +151,3 @@ function FileUpload({ onFileSelect, isLoading, isSlow, error }) {
 }
 
 export default FileUpload;
-

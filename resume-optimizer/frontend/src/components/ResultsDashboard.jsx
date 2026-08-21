@@ -7,6 +7,19 @@ import {
   PolarRadiusAxis,
   ResponsiveContainer,
 } from 'recharts';
+import {
+  RotateCcw,
+  Sparkles,
+  Download,
+  CheckCircle2,
+  AlertTriangle,
+  FileText,
+  FileSpreadsheet,
+  Info,
+  ShieldCheck,
+  Zap,
+  Target
+} from 'lucide-react';
 import HighlightedResume from './HighlightedResume';
 import BulletRewriteModal from './BulletRewriteModal';
 
@@ -30,27 +43,30 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
   const scoreTheme = useMemo(() => {
     if (overallScore >= 75) {
       return {
-        badgeBg: 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300',
+        badgeBg: 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300',
         bigNumberText: 'text-emerald-400',
         strokeColor: '#10b981',
         fillColor: '#10b981',
+        glowClass: 'glow-emerald',
         label: 'Strong Match',
       };
     }
     if (overallScore >= 50) {
       return {
-        badgeBg: 'bg-amber-950/40 border-amber-800/60 text-amber-300',
+        badgeBg: 'bg-amber-950/60 border-amber-800/80 text-amber-300',
         bigNumberText: 'text-amber-400',
         strokeColor: '#f59e0b',
         fillColor: '#f59e0b',
+        glowClass: '',
         label: 'Moderate Match',
       };
     }
     return {
-      badgeBg: 'bg-rose-950/40 border-rose-800/60 text-rose-300',
+      badgeBg: 'bg-rose-950/60 border-rose-800/80 text-rose-300',
       bigNumberText: 'text-rose-400',
       strokeColor: '#f43f5e',
       fillColor: '#f43f5e',
+      glowClass: '',
       label: 'Low Match',
     };
   }, [overallScore]);
@@ -208,38 +224,44 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8 animate-fade-in pb-12 overflow-x-hidden">
+      {/* AI DISCLAIMER NOTICE BANNER */}
+      <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl flex items-start gap-3 text-xs text-slate-400 backdrop-blur-md">
+        <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+        <p className="leading-relaxed">
+          <strong className="text-slate-200">AI Analysis Notice:</strong> Ratings, ATS gap analyses, and suggested bullet rewrites are AI-generated recommendations. Please review and verify all phrasing for 100% accuracy before submitting to prospective employers.
+        </p>
+      </div>
+
       {/* Top Header & Reset Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-5 sm:p-6 rounded-2xl shadow-2xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-5 sm:p-6 rounded-3xl shadow-2xl backdrop-blur-md">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-heading">
               Match Analysis Dashboard
             </h2>
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${scoreTheme.badgeBg}`}>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold border font-heading ${scoreTheme.badgeBg}`}>
               {scoreTheme.label}
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Visual breakdown of resume alignment against job requirements
+            Comprehensive breakdown of resume alignment against job requirements
           </p>
         </div>
 
         <button
           onClick={onReset}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-semibold rounded-xl border border-slate-700 transition-all shadow-md active:scale-95 min-h-[44px]"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs sm:text-sm font-semibold rounded-xl border border-slate-700 transition-all shadow-md active:scale-95 min-h-[44px]"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
+          <RotateCcw className="w-4 h-4" />
           Analyze Another Role
         </button>
       </div>
 
       {/* MATCH SCORE SECTION — Big Score Callout + Radar Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        {/* Big Overall Score Card */}
-        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-xl relative overflow-hidden">
-          <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
+        {/* Unmistakable Focal Point: Big Score Card */}
+        <div className={`lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-2xl relative overflow-hidden backdrop-blur-md ${scoreTheme.glowClass}`}>
+          <div className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-2 font-heading">
             Overall Match Score
           </div>
 
@@ -248,7 +270,7 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
             <span className="text-2xl text-slate-500 font-sans font-normal ml-1">/100</span>
           </div>
 
-          <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden my-4 max-w-[200px]">
+          <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden my-4 max-w-[200px] border border-slate-800">
             <div
               className="h-full rounded-full transition-all duration-700 ease-out"
               style={{
@@ -259,14 +281,14 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
           </div>
 
           <p className="text-xs text-slate-400 max-w-[220px]">
-            Calculated across skills, work experience, and job keyword frequency
+            Calculated across skills, experience, and key terminology alignment
           </p>
         </div>
 
         {/* Recharts Radar Chart */}
-        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 flex flex-col justify-between shadow-xl min-h-[300px] overflow-hidden">
+        <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-6 flex flex-col justify-between shadow-2xl min-h-[300px] overflow-hidden backdrop-blur-md">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 mb-2 gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-heading">
               Category Radar Match
             </h3>
             <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-slate-400">
@@ -306,12 +328,10 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
       </div>
 
       {/* EXECUTIVE SUMMARY CALLOUT CARD */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/20 to-slate-900 border border-indigo-900/40 rounded-2xl p-5 sm:p-6 shadow-xl">
+      <div className="bg-gradient-to-r from-slate-900 via-sky-950/20 to-slate-900 border border-sky-900/30 rounded-3xl p-5 sm:p-6 shadow-2xl">
         <div className="flex items-center gap-2 mb-2">
-          <svg className="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-indigo-300">
+          <Sparkles className="w-5 h-5 text-sky-400 shrink-0" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-sky-300 font-heading">
             Executive Summary Assessment
           </h3>
         </div>
@@ -323,13 +343,13 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
       {/* KEYWORD GAP LIST SECTION — Matched & Missing */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Matched Keywords */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2 font-heading">
               <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
               Matched Keywords ({matchedKeywords.length})
             </h3>
-            <span className="text-[11px] text-slate-500">Found in resume</span>
+            <span className="text-[11px] text-slate-500 font-medium">Found in resume</span>
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
@@ -337,9 +357,10 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
               matchedKeywords.map((keyword, idx) => (
                 <span
                   key={idx}
-                  className="px-3 py-1.5 bg-emerald-950/50 text-emerald-300 border border-emerald-800/80 text-xs font-medium rounded-lg shadow-sm"
+                  className="px-3 py-1.5 bg-emerald-950/50 text-emerald-300 border border-emerald-800/80 text-xs font-semibold rounded-xl shadow-sm flex items-center gap-1.5"
                 >
-                  ✓ {keyword}
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{keyword}</span>
                 </span>
               ))
             ) : (
@@ -349,13 +370,13 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
         </div>
 
         {/* Missing Keywords */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl">
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-rose-400 flex items-center gap-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-2 font-heading">
               <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
               Missing Keywords ({sortedMissingKeywords.length})
             </h3>
-            <span className="text-[11px] text-slate-500">Sorted by importance</span>
+            <span className="text-[11px] text-slate-500 font-medium">Sorted by importance</span>
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
@@ -363,10 +384,10 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
               sortedMissingKeywords.map((item, idx) => (
                 <span
                   key={idx}
-                  className={`px-3 py-1.5 border text-xs font-medium rounded-lg flex items-center gap-2 shadow-sm ${getMissingKeywordStyle(item.importance)}`}
+                  className={`px-3 py-1.5 border text-xs font-semibold rounded-xl flex items-center gap-2 shadow-sm ${getMissingKeywordStyle(item.importance)}`}
                 >
                   <span>{item.keyword}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-black/30 border border-white/10">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-extrabold tracking-wider bg-black/40 border border-white/10">
                     {item.importance}
                   </span>
                 </span>
@@ -379,13 +400,11 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
       </div>
 
       {/* EXPORT RESUME CONTROL CARD */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4">
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <svg className="w-5 h-5 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
+            <h3 className="text-base font-bold text-white flex items-center gap-2 font-heading">
+              <Download className="w-5 h-5 text-sky-400 shrink-0" />
               Export Optimized Resume
             </h3>
             <p className="text-xs text-slate-400 mt-1">
@@ -397,7 +416,7 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
             <button
               onClick={() => handleExport('pdf')}
               disabled={isExporting}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition-all shadow-md active:scale-95 min-h-[44px]"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 min-h-[44px] font-heading"
             >
               {isExporting && exportingFormat === 'pdf' ? (
                 <>
@@ -406,9 +425,7 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
                 </>
               ) : (
                 <>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V7.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 1H7a2 2 0 00-2 2v16a2 2 0 002 2z" />
-                  </svg>
+                  <FileText className="w-4 h-4" />
                   <span>Download as PDF</span>
                 </>
               )}
@@ -417,7 +434,7 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
             <button
               onClick={() => handleExport('docx')}
               disabled={isExporting}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-100 text-xs font-semibold rounded-xl border border-slate-700 transition-all shadow-md active:scale-95 min-h-[44px]"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-100 text-xs font-bold rounded-xl border border-slate-700 transition-all shadow-md active:scale-95 min-h-[44px] font-heading"
             >
               {isExporting && exportingFormat === 'docx' ? (
                 <>
@@ -426,9 +443,7 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
                 </>
               ) : (
                 <>
-                  <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <FileSpreadsheet className="w-4 h-4 text-sky-400" />
                   <span>Download as DOCX</span>
                 </>
               )}
@@ -470,4 +485,5 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
 }
 
 export default ResultsDashboard;
+
 
