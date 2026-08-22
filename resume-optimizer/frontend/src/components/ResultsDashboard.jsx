@@ -18,7 +18,13 @@ import {
   Info,
   ShieldCheck,
   Zap,
-  Target
+  Target,
+  Copy,
+  Check,
+  Filter,
+  BarChart3,
+  Layers,
+  Wand2
 } from 'lucide-react';
 import HighlightedResume from './HighlightedResume';
 import BulletRewriteModal from './BulletRewriteModal';
@@ -26,6 +32,9 @@ import BulletRewriteModal from './BulletRewriteModal';
 function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpired }) {
   const [currentResumeText, setCurrentResumeText] = useState(resumeText);
   const [editedLineIndices, setEditedLineIndices] = useState(() => new Set());
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'keywords' | 'editor'
+  const [keywordFilter, setKeywordFilter] = useState('all'); // 'all' | 'high' | 'medium' | 'low'
+  const [copiedKeyword, setCopiedKeyword] = useState(null);
 
   // Rewrite Modal state
   const [activeLine, setActiveLine] = useState(null); // { index, text }
@@ -43,31 +52,34 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
   const scoreTheme = useMemo(() => {
     if (overallScore >= 75) {
       return {
-        badgeBg: 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300',
+        badgeBg: 'bg-emerald-950/80 border-emerald-800/90 text-emerald-300',
         bigNumberText: 'text-emerald-400',
         strokeColor: '#10b981',
         fillColor: '#10b981',
         glowClass: 'glow-emerald',
-        label: 'Strong Match',
+        label: 'Strong Role Match',
+        description: 'Excellent ATS optimization! Your resume strongly matches the job requirements.',
       };
     }
     if (overallScore >= 50) {
       return {
-        badgeBg: 'bg-amber-950/60 border-amber-800/80 text-amber-300',
+        badgeBg: 'bg-amber-950/80 border-amber-800/90 text-amber-300',
         bigNumberText: 'text-amber-400',
         strokeColor: '#f59e0b',
         fillColor: '#f59e0b',
         glowClass: '',
-        label: 'Moderate Match',
+        label: 'Moderate Role Match',
+        description: 'Good foundation. Adding missing key skills below will significantly boost your interview callback rate.',
       };
     }
     return {
-      badgeBg: 'bg-rose-950/60 border-rose-800/80 text-rose-300',
+      badgeBg: 'bg-rose-950/80 border-rose-800/90 text-rose-300',
       bigNumberText: 'text-rose-400',
       strokeColor: '#f43f5e',
       fillColor: '#f43f5e',
       glowClass: '',
-      label: 'Low Match',
+      label: 'Needs Key Keyword Alignment',
+      description: 'Significant keyword gap detected. Incorporating target terms and tailored bullet rewrites is recommended.',
     };
   }, [overallScore]);
 
@@ -78,26 +90,37 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
     { subject: 'Keywords', score: categoryScores.keywordMatch ?? 0, fullMark: 100 },
   ], [categoryScores]);
 
-  // Sort missing keywords by importance (High -> Medium -> Low)
+  // Filter missing keywords
   const sortedMissingKeywords = useMemo(() => {
     const order = { high: 1, medium: 2, low: 3 };
-    return [...(missingKeywords || [])].sort((a, b) => {
+    let list = [...(missingKeywords || [])].sort((a, b) => {
       const impA = order[a.importance?.toLowerCase()] || 4;
       const impB = order[b.importance?.toLowerCase()] || 4;
       return impA - impB;
     });
-  }, [missingKeywords]);
+
+    if (keywordFilter !== 'all') {
+      list = list.filter((kw) => kw.importance?.toLowerCase() === keywordFilter);
+    }
+    return list;
+  }, [missingKeywords, keywordFilter]);
 
   const getMissingKeywordStyle = (importance) => {
     switch (importance?.toLowerCase()) {
       case 'high':
-        return 'bg-rose-950/60 text-rose-200 border-rose-800/80';
+        return 'bg-rose-950/70 text-rose-200 border-rose-800/90 hover:border-rose-500';
       case 'medium':
-        return 'bg-amber-950/60 text-amber-200 border-amber-800/80';
+        return 'bg-amber-950/70 text-amber-200 border-amber-800/90 hover:border-amber-500';
       case 'low':
       default:
-        return 'bg-slate-800/80 text-slate-300 border-slate-700';
+        return 'bg-slate-800/80 text-slate-300 border-slate-700/80 hover:border-slate-500';
     }
+  };
+
+  const copyKeywordToClipboard = (keywordText) => {
+    navigator.clipboard.writeText(keywordText);
+    setCopiedKeyword(keywordText);
+    setTimeout(() => setCopiedKeyword(null), 2000);
   };
 
   const fetchBulletRewrites = async (bulletText) => {
@@ -199,291 +222,378 @@ function ResultsDashboard({ analysis, resumeText, onReset, token, onSessionExpir
 
   const handleSelectRewrite = (newText) => {
     if (!activeLine) return;
-
     const lines = currentResumeText.split('\n');
     lines[activeLine.index] = newText;
-
     const updatedResumeText = lines.join('\n');
+
     setCurrentResumeText(updatedResumeText);
-
-    setEditedLineIndices((prev) => {
-      const nextSet = new Set(prev);
-      nextSet.add(activeLine.index);
-      return nextSet;
-    });
-
+    setEditedLineIndices((prev) => new Set(prev).add(activeLine.index));
     setActiveLine(null);
-  };
-
-  const handleCloseModal = () => {
-    setActiveLine(null);
-    setIsRewriting(false);
-    setRewriteError(null);
-    setRewrites([]);
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8 animate-fade-in pb-12 overflow-x-hidden">
-      {/* AI DISCLAIMER NOTICE BANNER */}
-      <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl flex items-start gap-3 text-xs text-slate-400 backdrop-blur-md">
-        <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-        <p className="leading-relaxed">
-          <strong className="text-slate-200">AI Analysis Notice:</strong> Ratings, ATS gap analyses, and suggested bullet rewrites are AI-generated recommendations. Please review and verify all phrasing for 100% accuracy before submitting to prospective employers.
-        </p>
-      </div>
-
-      {/* Top Header & Reset Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-5 sm:p-6 rounded-3xl shadow-2xl backdrop-blur-md">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white font-heading">
-              Match Analysis Dashboard
+    <div className="space-y-8 animate-fade-in w-full max-w-5xl mx-auto">
+      {/* Action Header Bar */}
+      <div className="glass-panel p-4 sm:p-5 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
+            <Target className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-extrabold text-white tracking-tight font-heading">
+              Optimization Control Room
             </h2>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold border font-heading ${scoreTheme.badgeBg}`}>
-              {scoreTheme.label}
-            </span>
+            <p className="text-xs text-slate-400">ATS Insights & Interactive Bullet Rewriter</p>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Comprehensive breakdown of resume alignment against job requirements
-          </p>
         </div>
 
-        <button
-          onClick={onReset}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs sm:text-sm font-semibold rounded-xl border border-slate-700 transition-all shadow-md active:scale-95 min-h-[44px]"
-        >
-          <RotateCcw className="w-4 h-4" />
-          Analyze Another Role
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => handleExport('pdf')}
+            disabled={isExporting}
+            className="px-4 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500 text-white rounded-2xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-2 min-h-[40px] font-heading"
+          >
+            {isExporting && exportingFormat === 'pdf' ? (
+              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            <span>Export PDF</span>
+          </button>
+
+          <button
+            onClick={() => handleExport('txt')}
+            disabled={isExporting}
+            className="px-4 py-2.5 bg-slate-800/90 hover:bg-slate-700 text-slate-200 rounded-2xl text-xs font-bold transition-all border border-slate-700 active:scale-95 flex items-center gap-2 min-h-[40px] font-heading"
+          >
+            {isExporting && exportingFormat === 'txt' ? (
+              <span className="w-3.5 h-3.5 border-2 border-slate-300/30 border-t-slate-300 rounded-full animate-spin" />
+            ) : (
+              <FileSpreadsheet className="w-4 h-4 text-sky-400" />
+            )}
+            <span>Export TXT</span>
+          </button>
+
+          <button
+            onClick={onReset}
+            className="px-3.5 py-2.5 bg-slate-900/90 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-2xl text-xs font-semibold transition-all border border-slate-800 min-h-[40px] flex items-center gap-1.5 font-heading"
+            title="Start new analysis"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>New Scan</span>
+          </button>
+        </div>
       </div>
 
-      {/* MATCH SCORE SECTION — Big Score Callout + Radar Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        {/* Unmistakable Focal Point: Big Score Card */}
-        <div className={`lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-2xl relative overflow-hidden backdrop-blur-md ${scoreTheme.glowClass}`}>
-          <div className="text-xs font-extrabold uppercase tracking-widest text-slate-400 mb-2 font-heading">
-            Overall Match Score
-          </div>
-
-          <div className={`text-6xl sm:text-7xl font-extrabold tracking-tight my-2 font-mono ${scoreTheme.bigNumberText}`}>
-            {overallScore}
-            <span className="text-2xl text-slate-500 font-sans font-normal ml-1">/100</span>
-          </div>
-
-          <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden my-4 max-w-[200px] border border-slate-800">
-            <div
-              className="h-full rounded-full transition-all duration-700 ease-out"
-              style={{
-                width: `${overallScore}%`,
-                backgroundColor: scoreTheme.strokeColor,
-              }}
-            />
-          </div>
-
-          <p className="text-xs text-slate-400 max-w-[220px]">
-            Calculated across skills, experience, and key terminology alignment
-          </p>
+      {exportError && (
+        <div className="p-3.5 bg-rose-950/60 border border-rose-800/80 rounded-2xl text-rose-200 text-xs font-medium flex items-center gap-2.5 animate-scale-up">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+          <span>{exportError}</span>
         </div>
+      )}
 
-        {/* Recharts Radar Chart */}
-        <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-3xl p-4 sm:p-6 flex flex-col justify-between shadow-2xl min-h-[300px] overflow-hidden backdrop-blur-md">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 mb-2 gap-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-heading">
-              Category Radar Match
-            </h3>
-            <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-slate-400">
-              <span>Skills: <strong className="text-white">{categoryScores.skillsMatch ?? 0}%</strong></span>
-              <span>Exp: <strong className="text-white">{categoryScores.experienceMatch ?? 0}%</strong></span>
-              <span>Keywords: <strong className="text-white">{categoryScores.keywordMatch ?? 0}%</strong></span>
+      {/* OVERALL MATCH SCORE HERO CARD */}
+      <div className={`glass-panel p-6 sm:p-8 rounded-3xl shadow-2xl relative overflow-hidden ${scoreTheme.glowClass}`}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {/* Big Radial Gauge & Score */}
+          <div className="lg:col-span-5 flex flex-col items-center justify-center text-center space-y-3 border-b lg:border-b-0 lg:border-r border-slate-800/80 pb-6 lg:pb-0 lg:pr-6">
+            <div className="relative w-36 h-36 flex items-center justify-center">
+              {/* Outer Ring Ambient Glow */}
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  className="text-slate-800/80"
+                  fill="transparent"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  stroke={scoreTheme.strokeColor}
+                  strokeWidth="8"
+                  strokeDasharray="264"
+                  strokeDashoffset={264 - (264 * overallScore) / 100}
+                  strokeLinecap="round"
+                  className="transition-all duration-1000 ease-out"
+                  fill="transparent"
+                />
+              </svg>
+              <div className="absolute flex flex-col items-center justify-center">
+                <span className={`text-4xl font-extrabold font-mono tracking-tight ${scoreTheme.bigNumberText}`}>
+                  {overallScore}
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">out of 100</span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className={`inline-block px-3 py-1 rounded-full border text-xs font-extrabold font-heading ${scoreTheme.badgeBg}`}>
+                {scoreTheme.label}
+              </span>
+              <p className="text-xs text-slate-400 max-w-xs leading-relaxed">{scoreTheme.description}</p>
             </div>
           </div>
 
-          <div className="w-full h-[220px] sm:h-[250px] relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-                <PolarGrid stroke="#334155" strokeDasharray="3 3" />
-                <PolarAngleAxis
-                  dataKey="subject"
-                  tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
-                />
-                <PolarRadiusAxis
-                  angle={30}
-                  domain={[0, 100]}
-                  tick={{ fill: '#64748b', fontSize: 9 }}
-                  axisLine={false}
-                />
-                <Radar
-                  name="Score"
-                  dataKey="score"
-                  stroke={scoreTheme.strokeColor}
-                  fill={scoreTheme.fillColor}
-                  fillOpacity={0.4}
-                  isAnimationActive={true}
-                  animationDuration={800}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
+          {/* Recharts Radar Chart */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-300 flex items-center gap-2 font-heading">
+                <BarChart3 className="w-4 h-4 text-sky-400" />
+                Dimensional Match Breakdown
+              </h3>
+              <span className="text-xs text-slate-400 font-mono">3 Core Pillars</span>
+            </div>
+
+            <div className="h-52 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+                  <PolarGrid stroke="#334155" strokeDasharray="3 3" />
+                  <PolarAngleAxis dataKey="subject" stroke="#94a3b8" tick={{ fill: '#cbd5e1', fontSize: 12, fontWeight: 600 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#475569" tick={false} />
+                  <Radar
+                    name="Score"
+                    dataKey="score"
+                    stroke={scoreTheme.strokeColor}
+                    fill={scoreTheme.fillColor}
+                    fillOpacity={0.4}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Score pills */}
+            <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-slate-800/80">
+              <div className="p-2.5 rounded-2xl bg-[#06090e]/80 border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold uppercase block font-heading">Skills</span>
+                <span className="text-sm font-extrabold font-mono text-white">{categoryScores.skillsMatch ?? 0}%</span>
+              </div>
+              <div className="p-2.5 rounded-2xl bg-[#06090e]/80 border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold uppercase block font-heading">Experience</span>
+                <span className="text-sm font-extrabold font-mono text-white">{categoryScores.experienceMatch ?? 0}%</span>
+              </div>
+              <div className="p-2.5 rounded-2xl bg-[#06090e]/80 border border-slate-800">
+                <span className="text-[10px] text-slate-400 font-bold uppercase block font-heading">Keywords</span>
+                <span className="text-sm font-extrabold font-mono text-white">{categoryScores.keywordMatch ?? 0}%</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* EXECUTIVE SUMMARY CALLOUT CARD */}
-      <div className="bg-gradient-to-r from-slate-900 via-sky-950/20 to-slate-900 border border-sky-900/30 rounded-3xl p-5 sm:p-6 shadow-2xl">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="w-5 h-5 text-sky-400 shrink-0" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-sky-300 font-heading">
-            Executive Summary Assessment
-          </h3>
-        </div>
-        <p className="text-slate-200 text-sm sm:text-base leading-relaxed">
-          {summary}
-        </p>
+      {/* SEGMENTED NAVIGATION TABS */}
+      <div className="grid grid-cols-3 p-1.5 glass-panel rounded-2xl gap-1">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`py-3 text-xs font-extrabold rounded-xl transition-all font-heading flex items-center justify-center gap-2 ${
+            activeTab === 'overview'
+              ? 'bg-gradient-to-r from-sky-500 to-cyan-600 text-white shadow-lg glow-cyan'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span className="hidden sm:inline">Overview & Summary</span>
+          <span className="sm:hidden">Summary</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('keywords')}
+          className={`py-3 text-xs font-extrabold rounded-xl transition-all font-heading flex items-center justify-center gap-2 ${
+            activeTab === 'keywords'
+              ? 'bg-gradient-to-r from-sky-500 to-cyan-600 text-white shadow-lg glow-cyan'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Target className="w-4 h-4" />
+          <span className="hidden sm:inline">Keyword Gap Analysis</span>
+          <span className="sm:hidden">Keywords</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('editor')}
+          className={`py-3 text-xs font-extrabold rounded-xl transition-all font-heading flex items-center justify-center gap-2 ${
+            activeTab === 'editor'
+              ? 'bg-gradient-to-r from-sky-500 to-cyan-600 text-white shadow-lg glow-cyan'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Wand2 className="w-4 h-4" />
+          <span className="hidden sm:inline">Interactive Bullet Editor</span>
+          <span className="sm:hidden">Editor</span>
+        </button>
       </div>
 
-      {/* KEYWORD GAP LIST SECTION — Matched & Missing */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Matched Keywords */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2 font-heading">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-              Matched Keywords ({matchedKeywords.length})
-            </h3>
-            <span className="text-[11px] text-slate-500 font-medium">Found in resume</span>
-          </div>
+      {/* TAB 1: OVERVIEW & SUMMARY */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6 animate-fade-in">
+          {summary && (
+            <div className="glass-panel p-6 rounded-3xl space-y-3 shadow-xl">
+              <h3 className="text-sm font-extrabold text-white flex items-center gap-2 font-heading">
+                <Info className="w-4 h-4 text-sky-400" />
+                Executive ATS Assessment Summary
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed bg-[#06090e]/80 p-4 rounded-2xl border border-slate-800/80">
+                {summary}
+              </p>
+            </div>
+          )}
 
-          <div className="flex flex-wrap gap-2 pt-1">
-            {matchedKeywords.length > 0 ? (
-              matchedKeywords.map((keyword, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1.5 bg-emerald-950/50 text-emerald-300 border border-emerald-800/80 text-xs font-semibold rounded-xl shadow-sm flex items-center gap-1.5"
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Matched Keywords Box */}
+            <div className="glass-panel p-6 rounded-3xl space-y-4 shadow-xl">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-2 font-heading">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Matched Keywords ({matchedKeywords.length})
+                </h4>
+                <span className="text-[11px] text-emerald-400 font-bold font-mono">Present in Resume</span>
+              </div>
+
+              {matchedKeywords.length === 0 ? (
+                <p className="text-xs text-slate-500 italic">No direct keyword matches detected.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {matchedKeywords.map((kw, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-800/80 text-emerald-200 text-xs font-medium shadow-sm"
+                    >
+                      ✓ {typeof kw === 'string' ? kw : kw.keyword}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Top Missing Keywords preview Box */}
+            <div className="glass-panel p-6 rounded-3xl space-y-4 shadow-xl">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-rose-400 flex items-center gap-2 font-heading">
+                  <AlertTriangle className="w-4 h-4 text-rose-400" />
+                  Top Missing Keywords ({missingKeywords.length})
+                </h4>
+                <button
+                  onClick={() => setActiveTab('keywords')}
+                  className="text-xs text-sky-400 hover:text-sky-300 font-bold underline"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{keyword}</span>
-                </span>
-              ))
+                  View All Gaps
+                </button>
+              </div>
+
+              {missingKeywords.length === 0 ? (
+                <p className="text-xs text-slate-400">Great job! No key role keywords are missing.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {missingKeywords.slice(0, 10).map((kw, idx) => (
+                    <span
+                      key={idx}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-medium ${getMissingKeywordStyle(kw.importance)}`}
+                    >
+                      + {kw.keyword}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: KEYWORD GAP ANALYSIS */}
+      {activeTab === 'keywords' && (
+        <div className="glass-panel p-6 sm:p-8 rounded-3xl space-y-6 shadow-2xl animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+            <div>
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2 font-heading">
+                <Target className="w-5 h-5 text-sky-400" />
+                Missing ATS Keywords & Skills Gap Breakdown
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">Click any keyword to copy to clipboard for quick placement.</p>
+            </div>
+
+            {/* Filter buttons */}
+            <div className="flex items-center gap-1.5 bg-[#06090e]/90 p-1 rounded-2xl border border-slate-800">
+              <span className="text-[10px] text-slate-500 font-bold uppercase px-2 font-heading flex items-center gap-1">
+                <Filter className="w-3 h-3 text-slate-400" />
+                Filter:
+              </span>
+              {['all', 'high', 'medium', 'low'].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setKeywordFilter(f)}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold uppercase transition-all font-heading ${
+                    keywordFilter === f
+                      ? 'bg-sky-500 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {sortedMissingKeywords.length === 0 ? (
+              <div className="col-span-full py-8 text-center text-xs text-slate-400">
+                No missing keywords matching filter criteria.
+              </div>
             ) : (
-              <p className="text-xs text-slate-500 italic">No exact matching keywords found.</p>
+              sortedMissingKeywords.map((kw, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => copyKeywordToClipboard(kw.keyword)}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group shadow-sm ${getMissingKeywordStyle(kw.importance)}`}
+                  title="Click to copy keyword"
+                >
+                  <div className="space-y-1 min-w-0 pr-2">
+                    <span className="font-bold text-xs block truncate font-heading">{kw.keyword}</span>
+                    <span className="text-[10px] uppercase font-mono tracking-wider opacity-80 block">
+                      Importance: {kw.importance || 'Medium'}
+                    </span>
+                  </div>
+
+                  <button className="p-1.5 rounded-lg bg-black/20 hover:bg-black/40 transition-colors shrink-0 text-slate-200">
+                    {copiedKeyword === kw.keyword ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100" />
+                    )}
+                  </button>
+                </div>
+              ))
             )}
           </div>
         </div>
+      )}
 
-        {/* Missing Keywords */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-2 font-heading">
-              <span className="w-2 h-2 rounded-full bg-rose-400 shrink-0" />
-              Missing Keywords ({sortedMissingKeywords.length})
-            </h3>
-            <span className="text-[11px] text-slate-500 font-medium">Sorted by importance</span>
-          </div>
-
-          <div className="flex flex-wrap gap-2 pt-1">
-            {sortedMissingKeywords.length > 0 ? (
-              sortedMissingKeywords.map((item, idx) => (
-                <span
-                  key={idx}
-                  className={`px-3 py-1.5 border text-xs font-semibold rounded-xl flex items-center gap-2 shadow-sm ${getMissingKeywordStyle(item.importance)}`}
-                >
-                  <span>{item.keyword}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-extrabold tracking-wider bg-black/40 border border-white/10">
-                    {item.importance}
-                  </span>
-                </span>
-              ))
-            ) : (
-              <p className="text-xs text-slate-500 italic">No critical missing keywords identified.</p>
-            )}
-          </div>
+      {/* TAB 3: INTERACTIVE RESUME LINE EDITOR */}
+      {activeTab === 'editor' && (
+        <div className="space-y-4 animate-fade-in">
+          <HighlightedResume
+            resumeText={currentResumeText}
+            matchedKeywords={matchedKeywords.map(k => typeof k === 'string' ? k : k.keyword)}
+            editedLineIndices={editedLineIndices}
+            onLineClick={handleLineClick}
+          />
         </div>
-      </div>
-
-      {/* EXPORT RESUME CONTROL CARD */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2 font-heading">
-              <Download className="w-5 h-5 text-sky-400 shrink-0" />
-              Export Optimized Resume
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Download your resume including any accepted bullet rewrites applied below.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-            <button
-              onClick={() => handleExport('pdf')}
-              disabled={isExporting}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-sky-500 to-cyan-600 hover:from-sky-400 hover:to-cyan-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 min-h-[44px] font-heading"
-            >
-              {isExporting && exportingFormat === 'pdf' ? (
-                <>
-                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Preparing PDF...</span>
-                </>
-              ) : (
-                <>
-                  <FileText className="w-4 h-4" />
-                  <span>Download as PDF</span>
-                </>
-              )}
-            </button>
-
-            <button
-              onClick={() => handleExport('docx')}
-              disabled={isExporting}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-100 text-xs font-bold rounded-xl border border-slate-700 transition-all shadow-md active:scale-95 min-h-[44px] font-heading"
-            >
-              {isExporting && exportingFormat === 'docx' ? (
-                <>
-                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Preparing DOCX...</span>
-                </>
-              ) : (
-                <>
-                  <FileSpreadsheet className="w-4 h-4 text-sky-400" />
-                  <span>Download as DOCX</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {exportError && (
-          <div className="p-3 bg-rose-950/40 border border-rose-800/60 rounded-xl text-rose-300 text-xs font-medium">
-            {exportError}
-          </div>
-        )}
-      </div>
-
-      {/* RESUME TEXT WITH INTERACTIVE BULLET REWRITING */}
-      {currentResumeText && (
-        <HighlightedResume
-          resumeText={currentResumeText}
-          matchedKeywords={matchedKeywords}
-          editedLineIndices={editedLineIndices}
-          onLineClick={handleLineClick}
-        />
       )}
 
       {/* BULLET REWRITE MODAL */}
-      {activeLine && (
-        <BulletRewriteModal
-          originalText={activeLine.text}
-          rewrites={rewrites}
-          isLoading={isRewriting}
-          error={rewriteError}
-          onSelectRewrite={handleSelectRewrite}
-          onRetry={() => fetchBulletRewrites(activeLine.text)}
-          onClose={handleCloseModal}
-        />
-      )}
+      <BulletRewriteModal
+        originalText={activeLine?.text}
+        rewrites={rewrites}
+        isLoading={isRewriting}
+        error={rewriteError}
+        onSelectRewrite={handleSelectRewrite}
+        onRetry={() => activeLine && fetchBulletRewrites(activeLine.text)}
+        onClose={() => setActiveLine(null)}
+      />
     </div>
   );
 }
 
 export default ResultsDashboard;
-
-

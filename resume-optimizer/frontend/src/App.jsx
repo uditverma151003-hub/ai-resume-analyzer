@@ -7,6 +7,7 @@ import AuthForm from './components/AuthForm';
 import ScanHistory from './components/ScanHistory';
 import TermsModal from './components/TermsModal';
 import PrivacyModal from './components/PrivacyModal';
+import ThemeSwitcher from './components/ThemeSwitcher';
 import { supabase } from './lib/supabaseClient';
 import {
   Sparkles,
@@ -18,7 +19,12 @@ import {
   AlertCircle,
   ShieldCheck,
   FileText,
-  RotateCw
+  RotateCw,
+  UserCheck,
+  CheckCircle2,
+  ChevronRight,
+  TrendingUp,
+  Award
 } from 'lucide-react';
 
 function App() {
@@ -233,15 +239,18 @@ function App() {
     setLimitReached(false);
   };
 
+  // Determine current step index for the progress stepper
+  const currentStep = analysisResult ? 3 : parseResult ? 2 : 1;
+
   return (
-    <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col items-center justify-between font-sans selection:bg-sky-500/30">
-      {/* BRAND HEADER */}
-      <header className="w-full border-b border-slate-800/80 bg-[#0b0f17]/90 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)] flex flex-col items-center justify-between font-sans selection:bg-sky-500/30 transition-colors duration-300">
+      {/* BRAND FLOATING HEADER */}
+      <header className="w-full border-b border-slate-800/80 bg-[var(--header-bg)] backdrop-blur-xl sticky top-0 z-40 shadow-lg">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Logo & Tagline */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 p-0.5 shadow-lg glow-cyan flex items-center justify-center">
-              <div className="w-full h-full bg-[#0b0f17] rounded-[10px] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 p-0.5 shadow-lg glow-cyan flex items-center justify-center">
+              <div className="w-full h-full bg-[#0b0f17] rounded-[14px] flex items-center justify-center">
                 <Target className="w-5 h-5 text-sky-400" />
               </div>
             </div>
@@ -251,7 +260,7 @@ function App() {
                 <span className="text-lg font-extrabold tracking-tight text-white font-heading">
                   RESUME
                 </span>
-                <span className="text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-sky-500/10 border border-sky-500/30 text-sky-400 font-heading">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-md bg-sky-500/10 border border-sky-500/30 text-sky-400 font-heading">
                   OPTIMIZER
                 </span>
               </div>
@@ -259,20 +268,24 @@ function App() {
             </div>
           </div>
 
-          {/* Right Header Status Controls */}
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Right Header Status Controls & Theme Switcher */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Theme Selector */}
+            <ThemeSwitcher />
+
             {session?.user && (
-              <div className="flex items-center gap-3 bg-slate-900/80 border border-slate-800 px-3.5 py-1.5 rounded-full text-xs shadow-sm">
-                <span className="text-slate-300 font-medium truncate max-w-[160px]">
+              <div className="flex items-center gap-2.5 bg-slate-900/80 border border-slate-800 px-3 py-1.5 rounded-full text-xs shadow-sm">
+                <UserCheck className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                <span className="text-slate-200 font-semibold truncate max-w-[150px]">
                   {session.user.email}
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="text-slate-400 hover:text-rose-400 font-medium transition-colors border-l border-slate-800 pl-3 flex items-center gap-1 min-h-[28px]"
+                  className="text-slate-400 hover:text-rose-400 font-semibold transition-colors border-l border-slate-800 pl-2.5 flex items-center gap-1 min-h-[24px]"
                   title="Log out"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span>Logout</span>
+                  <span className="hidden sm:inline">Logout</span>
                 </button>
               </div>
             )}
@@ -287,14 +300,14 @@ function App() {
                     : 'bg-amber-400 animate-ping'
                 }`}
               />
-              <span className="truncate max-w-[200px] sm:max-w-none text-slate-300">
+              <span className="truncate max-w-[180px] sm:max-w-none text-slate-300">
                 {backendStatus === 'connected'
                   ? 'Server Online'
                   : backendStatus === 'unreachable'
-                  ? 'Server Unreachable'
+                  ? 'Server Offline'
                   : isWakingUpServer
-                  ? 'Waking up server...'
-                  : 'Checking server...'}
+                  ? 'Waking server...'
+                  : 'Checking...'}
               </span>
 
               {backendStatus === 'unreachable' && (
@@ -312,16 +325,16 @@ function App() {
       </header>
 
       {/* MAIN CONTENT AREA */}
-      <main className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-8">
+      <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-1 space-y-8">
         {sessionExpiredMsg && (
-          <div className="p-4 bg-amber-950/40 border border-amber-800/60 rounded-2xl flex items-center justify-between text-amber-200 text-xs font-medium shadow-lg animate-fade-in">
-            <div className="flex items-center gap-2">
+          <div className="p-4 bg-amber-950/60 border border-amber-800/80 rounded-2xl flex items-center justify-between text-amber-200 text-xs font-medium shadow-lg animate-fade-in">
+            <div className="flex items-center gap-2.5">
               <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
               <span>{sessionExpiredMsg}</span>
             </div>
             <button
               onClick={() => setSessionExpiredMsg(null)}
-              className="text-amber-400 hover:text-amber-300 font-bold underline ml-2"
+              className="text-amber-400 hover:text-amber-300 font-bold underline ml-2 font-heading"
             >
               Dismiss
             </button>
@@ -330,42 +343,58 @@ function App() {
 
         {authLoading ? (
           <div className="py-24 text-center text-sm text-slate-400 flex items-center justify-center gap-3">
-            <span className="w-5 h-5 border-2 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" />
-            Connecting to secure workspace...
+            <span className="w-6 h-6 border-3 border-sky-500/30 border-t-sky-500 rounded-full animate-spin" />
+            <span>Connecting to secure workspace...</span>
           </div>
         ) : !session ? (
           /* LANDING & HERO VIEW BEFORE SIGN IN */
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center py-6 animate-fade-in">
             {/* Hero Pitch Column */}
             <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>AI-Powered Resume Optimization</span>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-400 text-xs font-extrabold shadow-sm font-heading shimmer-badge">
+                <Sparkles className="w-4 h-4" />
+                <span>AI-Powered Precision Resume Matching</span>
               </div>
 
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-[1.15] font-heading">
-                Tailor your resume for <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-cyan-400">every job description.</span>
-              </h2>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-[1.15] font-heading">
+                Tailor your resume for <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-cyan-300 to-indigo-400">every single job posting.</span>
+              </h1>
 
-              <p className="text-slate-400 text-sm sm:text-base leading-relaxed max-w-xl">
-                Identify ATS keyword gaps, calculate precise match scores, and rewrite weak bullet points with 100% truthful, high-impact phrasing.
+              <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl">
+                Beat automated ATS screeners with instant keyword gap analysis, precise match scores, and AI bullet-point rewrites with 100% truthful metrics.
               </p>
 
+              {/* Statistics highlight pills */}
+              <div className="flex flex-wrap items-center gap-4 pt-1">
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs font-semibold text-slate-200">
+                  <TrendingUp className="w-4 h-4 text-emerald-400" />
+                  <span>98% ATS Compliance</span>
+                </div>
+                <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900/80 border border-slate-800 text-xs font-semibold text-slate-200">
+                  <Award className="w-4 h-4 text-sky-400" />
+                  <span>Truthful Metric Rewrites</span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-1">
-                  <div className="flex items-center gap-2 text-sky-400 font-bold text-xs uppercase tracking-wider font-heading">
+                <div className="p-5 rounded-3xl glass-panel glass-panel-hover space-y-2">
+                  <div className="flex items-center gap-2 text-sky-400 font-extrabold text-xs uppercase tracking-wider font-heading">
                     <FileCheck2 className="w-4 h-4" />
                     <span>ATS Gap Analysis</span>
                   </div>
-                  <p className="text-xs text-slate-400">Instant matched vs missing keyword breakdown ranked by role impact.</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Instant matched vs missing keyword breakdown ranked by role impact.
+                  </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-1">
-                  <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-wider font-heading">
+                <div className="p-5 rounded-3xl glass-panel glass-panel-hover space-y-2">
+                  <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-xs uppercase tracking-wider font-heading">
                     <Zap className="w-4 h-4" />
                     <span>Tailored Bullet Rewriter</span>
                   </div>
-                  <p className="text-xs text-slate-400">Transform weak bullets into metric-driven action statements.</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Transform generic bullet points into high-impact metric action statements.
+                  </p>
                 </div>
               </div>
             </div>
@@ -381,11 +410,43 @@ function App() {
         ) : (
           /* WORKSPACE VIEW AFTER SIGN IN */
           <div className="space-y-8">
+            {/* WORKFLOW STEPPER INDICATOR */}
+            <div className="glass-panel p-4 rounded-3xl shadow-xl flex items-center justify-between gap-2 max-w-3xl mx-auto text-xs font-heading">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl transition-all ${
+                currentStep === 1 ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 font-extrabold' : 'text-slate-400'
+              }`}>
+                <span className="w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+                <span>Upload Resume</span>
+              </div>
+
+              <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
+
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl transition-all ${
+                currentStep === 2 ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 font-extrabold' : 'text-slate-400'
+              }`}>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  currentStep >= 2 ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-400'
+                }`}>2</span>
+                <span>Target Job Posting</span>
+              </div>
+
+              <ChevronRight className="w-4 h-4 text-slate-600 shrink-0" />
+
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl transition-all ${
+                currentStep === 3 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-extrabold' : 'text-slate-400'
+              }`}>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  currentStep === 3 ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400'
+                }`}>3</span>
+                <span>Match Insights & Editor</span>
+              </div>
+            </div>
+
             {limitReached && (
-              <div className="p-4 bg-amber-950/50 border border-amber-800/80 rounded-2xl space-y-2 shadow-lg">
-                <div className="flex items-center gap-2 text-amber-300 font-bold text-sm font-heading">
+              <div className="p-4 bg-amber-950/60 border border-amber-800/80 rounded-2xl space-y-2 shadow-lg animate-scale-up">
+                <div className="flex items-center gap-2 text-amber-300 font-extrabold text-sm font-heading">
                   <AlertCircle className="w-5 h-5 shrink-0" />
-                  <span>Free Monthly Scan Limit Reached</span>
+                  <span>Free Monthly Scan Allowance Reached</span>
                 </div>
                 <p className="text-xs text-amber-200/90 leading-relaxed">
                   You've utilized your free monthly scan allowance for this calendar month. Your scan history remains fully accessible below.
@@ -433,25 +494,25 @@ function App() {
       </main>
 
       {/* LAUNCH FOOTER */}
-      <footer className="w-full border-t border-slate-800/80 bg-[#0b0f17] py-6 mt-12 text-slate-500 text-xs font-medium">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="w-full border-t border-slate-800/80 bg-[var(--header-bg)] backdrop-blur-md py-6 mt-12 text-slate-400 text-xs font-medium">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span>© {new Date().getFullYear()} Resume Optimizer.</span>
             <span className="hidden sm:inline">•</span>
-            <span className="hidden sm:inline">Built for Career Excellence</span>
+            <span className="hidden sm:inline">Engineered for ATS Success</span>
           </div>
 
           <div className="flex items-center gap-6">
             <button
               onClick={() => setIsTermsOpen(true)}
-              className="hover:text-slate-300 transition-colors underline-offset-4 hover:underline"
+              className="hover:text-white transition-colors underline-offset-4 hover:underline font-heading"
             >
               Terms of Service
             </button>
 
             <button
               onClick={() => setIsPrivacyOpen(true)}
-              className="hover:text-slate-300 transition-colors underline-offset-4 hover:underline"
+              className="hover:text-white transition-colors underline-offset-4 hover:underline font-heading"
             >
               Privacy Policy
             </button>
@@ -467,5 +528,3 @@ function App() {
 }
 
 export default App;
-
-
